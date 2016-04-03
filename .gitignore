@@ -31,6 +31,8 @@
 # Debug files
 *.dSYM/
 
-# Dependency files
+# Other files
 *.d
-
+*.map
+*.lst
+*.eep
