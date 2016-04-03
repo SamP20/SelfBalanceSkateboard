@@ -1,0 +1,978 @@
+   1               		.file	"i2c_master.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	i2c_init
+  12               	i2c_init:
+  13               	.LFB0:
+  14               		.file 1 "i2c_master.c"
+   1:i2c_master.c  **** #ifndef  F_CPU
+   2:i2c_master.c  **** #define F_CPU 16000000UL
+   3:i2c_master.c  **** #endif
+   4:i2c_master.c  **** 
+   5:i2c_master.c  **** #include <avr/io.h>
+   6:i2c_master.c  **** #include <util/twi.h>
+   7:i2c_master.c  **** 
+   8:i2c_master.c  **** #include "i2c_master.h"
+   9:i2c_master.c  **** 
+  10:i2c_master.c  **** #define F_SCL 100000UL // SCL frequency
+  11:i2c_master.c  **** #define Prescaler 1
+  12:i2c_master.c  **** #define TWBR_val ((((F_CPU / F_SCL) / Prescaler) - 16 ) / 2)
+  13:i2c_master.c  **** 
+  14:i2c_master.c  **** void i2c_init(void)
+  15:i2c_master.c  **** {
+  15               		.loc 1 15 0
+  16               		.cfi_startproc
+  17               	/* prologue: function */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+  16:i2c_master.c  **** 	PORTC |= (1<<PC4) | (1<<PC5);
+  21               		.loc 1 16 0
+  22 0000 88B1      		in r24,0x8
+  23 0002 8063      		ori r24,lo8(48)
+  24 0004 88B9      		out 0x8,r24
+  17:i2c_master.c  **** 	TWSR &= ~((1<<TWPS0)|(1<<TWPS1));
+  25               		.loc 1 17 0
+  26 0006 E9EB      		ldi r30,lo8(-71)
+  27 0008 F0E0      		ldi r31,0
+  28 000a 8081      		ld r24,Z
+  29 000c 8C7F      		andi r24,lo8(-4)
+  30 000e 8083      		st Z,r24
+  18:i2c_master.c  **** 	TWBR = (uint8_t)TWBR_val;
+  31               		.loc 1 18 0
+  32 0010 88E4      		ldi r24,lo8(72)
+  33 0012 8093 B800 		sts 184,r24
+  34 0016 0895      		ret
+  35               		.cfi_endproc
+  36               	.LFE0:
+  38               		.section	.rodata.str1.1,"aMS",@progbits,1
+  39               	.LC0:
+  40 0000 5374 6172 		.string	"Start error: %x\n"
+  40      7420 6572 
+  40      726F 723A 
+  40      2025 780A 
+  40      00
+  41               	.LC1:
+  42 0011 4164 6472 		.string	"Address ack error: %x\n"
+  42      6573 7320 
+  42      6163 6B20 
+  42      6572 726F 
+  42      723A 2025 
+  43               		.text
+  44               	.global	i2c_start
+  46               	i2c_start:
+  47               	.LFB1:
+  19:i2c_master.c  **** }
+  20:i2c_master.c  **** 
+  21:i2c_master.c  **** uint8_t i2c_start(uint8_t address)
+  22:i2c_master.c  **** {
+  48               		.loc 1 22 0
+  49               		.cfi_startproc
+  50               	.LVL0:
+  51               	/* prologue: function */
+  52               	/* frame size = 0 */
+  53               	/* stack size = 0 */
+  54               	.L__stack_usage = 0
+  23:i2c_master.c  **** 	// reset TWI control register
+  24:i2c_master.c  **** 	TWCR = 0;
+  55               		.loc 1 24 0
+  56 0018 1092 BC00 		sts 188,__zero_reg__
+  25:i2c_master.c  **** 	// transmit START condition
+  26:i2c_master.c  **** 	TWCR = (1<<TWINT) | (1<<TWSTA) | (1<<TWEN);
+  57               		.loc 1 26 0
+  58 001c 94EA      		ldi r25,lo8(-92)
+  59 001e 9093 BC00 		sts 188,r25
+  60               	.L4:
+  27:i2c_master.c  **** 	// wait for end of transmission
+  28:i2c_master.c  **** 	while( !(TWCR & (1<<TWINT)) );
+  61               		.loc 1 28 0 discriminator 1
+  62 0022 9091 BC00 		lds r25,188
+  63 0026 97FF      		sbrs r25,7
+  64 0028 00C0      		rjmp .L4
+  29:i2c_master.c  **** 
+  30:i2c_master.c  **** 	// check if the start condition was successfully transmitted
+  31:i2c_master.c  **** 	if((TWSR & 0xF8) != TW_START){
+  65               		.loc 1 31 0
+  66 002a 9091 B900 		lds r25,185
+  67 002e 987F      		andi r25,lo8(-8)
+  68 0030 9830      		cpi r25,lo8(8)
+  69 0032 01F0      		breq .L5
+  70               	.LBB11:
+  32:i2c_master.c  **** 		printf("Start error: %x\n", (TWSR & 0xF8));
+  71               		.loc 1 32 0
+  72 0034 8091 B900 		lds r24,185
+  73               	.LVL1:
+  74 0038 887F      		andi r24,lo8(-8)
+  75 003a 1F92      		push __zero_reg__
+  76               	.LCFI0:
+  77               		.cfi_remember_state
+  78               		.cfi_def_cfa_offset 3
+  79 003c 8F93      		push r24
+  80               	.LCFI1:
+  81               		.cfi_def_cfa_offset 4
+  82 003e 80E0      		ldi r24,lo8(.LC0)
+  83 0040 90E0      		ldi r25,hi8(.LC0)
+  84 0042 00C0      		rjmp .L11
+  85               	.LVL2:
+  86               	.L5:
+  87               	.LCFI2:
+  88               		.cfi_restore_state
+  89               	.LBE11:
+  33:i2c_master.c  **** 		return 1;
+  34:i2c_master.c  **** 	}
+  35:i2c_master.c  **** 
+  36:i2c_master.c  **** 	// load slave address into data register
+  37:i2c_master.c  **** 	TWDR = address;
+  90               		.loc 1 37 0
+  91 0044 8093 BB00 		sts 187,r24
+  38:i2c_master.c  **** 	// start transmission of address
+  39:i2c_master.c  **** 	TWCR = (1<<TWINT) | (1<<TWEN);
+  92               		.loc 1 39 0
+  93 0048 84E8      		ldi r24,lo8(-124)
+  94               	.LVL3:
+  95 004a 8093 BC00 		sts 188,r24
+  96               	.LVL4:
+  97               	.L8:
+  40:i2c_master.c  **** 	// wait for end of transmission
+  41:i2c_master.c  **** 	while( !(TWCR & (1<<TWINT)) );
+  98               		.loc 1 41 0 discriminator 1
+  99 004e 8091 BC00 		lds r24,188
+ 100 0052 87FF      		sbrs r24,7
+ 101 0054 00C0      		rjmp .L8
+  42:i2c_master.c  **** 
+  43:i2c_master.c  **** 	// check if the device has acknowledged the READ / WRITE mode
+  44:i2c_master.c  **** 	uint8_t twst = TW_STATUS & 0xF8;
+ 102               		.loc 1 44 0
+ 103 0056 8091 B900 		lds r24,185
+ 104 005a 887F      		andi r24,lo8(-8)
+ 105               	.LVL5:
+  45:i2c_master.c  **** 	if ( (twst != TW_MT_SLA_ACK) && (twst != TW_MR_SLA_ACK) ) {
+ 106               		.loc 1 45 0
+ 107 005c 8831      		cpi r24,lo8(24)
+ 108 005e 01F0      		breq .L10
+ 109               		.loc 1 45 0 is_stmt 0 discriminator 1
+ 110 0060 8034      		cpi r24,lo8(64)
+ 111 0062 01F0      		breq .L10
+ 112               	.LVL6:
+ 113               	.LBB12:
+ 114               	.LBB13:
+ 115               	.LBB14:
+  46:i2c_master.c  **** 		printf("Address ack error: %x\n", (TWSR & 0xF8));
+ 116               		.loc 1 46 0 is_stmt 1
+ 117 0064 8091 B900 		lds r24,185
+ 118               	.LVL7:
+ 119 0068 887F      		andi r24,lo8(-8)
+ 120 006a 1F92      		push __zero_reg__
+ 121               	.LCFI3:
+ 122               		.cfi_def_cfa_offset 3
+ 123 006c 8F93      		push r24
+ 124               	.LCFI4:
+ 125               		.cfi_def_cfa_offset 4
+ 126 006e 80E0      		ldi r24,lo8(.LC1)
+ 127 0070 90E0      		ldi r25,hi8(.LC1)
+ 128               	.LVL8:
+ 129               	.L11:
+ 130 0072 9F93      		push r25
+ 131               	.LCFI5:
+ 132               		.cfi_def_cfa_offset 5
+ 133 0074 8F93      		push r24
+ 134               	.LCFI6:
+ 135               		.cfi_def_cfa_offset 6
+ 136 0076 0E94 0000 		call printf
+ 137               	.LVL9:
+ 138 007a 0F90      		pop __tmp_reg__
+ 139 007c 0F90      		pop __tmp_reg__
+ 140 007e 0F90      		pop __tmp_reg__
+ 141 0080 0F90      		pop __tmp_reg__
+ 142               	.LCFI7:
+ 143               		.cfi_def_cfa_offset 2
+ 144 0082 81E0      		ldi r24,lo8(1)
+ 145 0084 0895      		ret
+ 146               	.LVL10:
+ 147               	.L10:
+ 148               	.LBE14:
+ 149               	.LBE13:
+ 150               	.LBE12:
+  47:i2c_master.c  **** 		return 1;
+  48:i2c_master.c  **** 	}
+  49:i2c_master.c  **** 
+  50:i2c_master.c  **** 	return 0;
+ 151               		.loc 1 50 0
+ 152 0086 80E0      		ldi r24,0
+ 153               	.LVL11:
+  51:i2c_master.c  **** }
+ 154               		.loc 1 51 0
+ 155 0088 0895      		ret
+ 156               		.cfi_endproc
+ 157               	.LFE1:
+ 159               		.section	.rodata.str1.1
+ 160               	.LC2:
+ 161 0028 4461 7461 		.string	"Data ack error: %x\n"
+ 161      2061 636B 
+ 161      2065 7272 
+ 161      6F72 3A20 
+ 161      2578 0A00 
+ 162               		.text
+ 163               	.global	i2c_write
+ 165               	i2c_write:
+ 166               	.LFB2:
+  52:i2c_master.c  **** 
+  53:i2c_master.c  **** uint8_t i2c_write(uint8_t data)
+  54:i2c_master.c  **** {
+ 167               		.loc 1 54 0
+ 168               		.cfi_startproc
+ 169               	.LVL12:
+ 170               	/* prologue: function */
+ 171               	/* frame size = 0 */
+ 172               	/* stack size = 0 */
+ 173               	.L__stack_usage = 0
+  55:i2c_master.c  **** 	// load data into data register
+  56:i2c_master.c  **** 	TWDR = data;
+ 174               		.loc 1 56 0
+ 175 008a 8093 BB00 		sts 187,r24
+  57:i2c_master.c  **** 	// start transmission of data
+  58:i2c_master.c  **** 	TWCR = (1<<TWINT) | (1<<TWEN);
+ 176               		.loc 1 58 0
+ 177 008e 84E8      		ldi r24,lo8(-124)
+ 178               	.LVL13:
+ 179 0090 8093 BC00 		sts 188,r24
+ 180               	.LVL14:
+ 181               	.L15:
+  59:i2c_master.c  **** 	// wait for end of transmission
+  60:i2c_master.c  **** 	while( !(TWCR & (1<<TWINT)) );
+ 182               		.loc 1 60 0 discriminator 1
+ 183 0094 8091 BC00 		lds r24,188
+ 184 0098 87FF      		sbrs r24,7
+ 185 009a 00C0      		rjmp .L15
+  61:i2c_master.c  **** 
+  62:i2c_master.c  **** 	if( (TWSR & 0xF8) != TW_MT_DATA_ACK ){
+ 186               		.loc 1 62 0
+ 187 009c 8091 B900 		lds r24,185
+ 188 00a0 887F      		andi r24,lo8(-8)
+ 189 00a2 8832      		cpi r24,lo8(40)
+ 190 00a4 01F0      		breq .L17
+ 191               	.LVL15:
+ 192               	.LBB19:
+ 193               	.LBB20:
+  63:i2c_master.c  **** 		printf("Data ack error: %x\n", (TWSR & 0xF8));
+ 194               		.loc 1 63 0
+ 195 00a6 8091 B900 		lds r24,185
+ 196 00aa 887F      		andi r24,lo8(-8)
+ 197 00ac 1F92      		push __zero_reg__
+ 198               	.LCFI8:
+ 199               		.cfi_def_cfa_offset 3
+ 200 00ae 8F93      		push r24
+ 201               	.LCFI9:
+ 202               		.cfi_def_cfa_offset 4
+ 203 00b0 80E0      		ldi r24,lo8(.LC2)
+ 204 00b2 90E0      		ldi r25,hi8(.LC2)
+ 205 00b4 9F93      		push r25
+ 206               	.LCFI10:
+ 207               		.cfi_def_cfa_offset 5
+ 208 00b6 8F93      		push r24
+ 209               	.LCFI11:
+ 210               		.cfi_def_cfa_offset 6
+ 211 00b8 0E94 0000 		call printf
+ 212               	.LVL16:
+ 213 00bc 0F90      		pop __tmp_reg__
+ 214 00be 0F90      		pop __tmp_reg__
+ 215 00c0 0F90      		pop __tmp_reg__
+ 216 00c2 0F90      		pop __tmp_reg__
+ 217               	.LCFI12:
+ 218               		.cfi_def_cfa_offset 2
+ 219 00c4 81E0      		ldi r24,lo8(1)
+ 220 00c6 0895      		ret
+ 221               	.LVL17:
+ 222               	.L17:
+ 223               	.LBE20:
+ 224               	.LBE19:
+  64:i2c_master.c  **** 		return 1;
+  65:i2c_master.c  **** 	}
+  66:i2c_master.c  **** 
+  67:i2c_master.c  **** 	return 0;
+ 225               		.loc 1 67 0
+ 226 00c8 80E0      		ldi r24,0
+  68:i2c_master.c  **** }
+ 227               		.loc 1 68 0
+ 228 00ca 0895      		ret
+ 229               		.cfi_endproc
+ 230               	.LFE2:
+ 232               	.global	i2c_read_ack
+ 234               	i2c_read_ack:
+ 235               	.LFB3:
+  69:i2c_master.c  **** 
+  70:i2c_master.c  **** uint8_t i2c_read_ack(void)
+  71:i2c_master.c  **** {
+ 236               		.loc 1 71 0
+ 237               		.cfi_startproc
+ 238               	/* prologue: function */
+ 239               	/* frame size = 0 */
+ 240               	/* stack size = 0 */
+ 241               	.L__stack_usage = 0
+  72:i2c_master.c  **** 
+  73:i2c_master.c  **** 	// start TWI module and acknowledge data after reception
+  74:i2c_master.c  **** 	TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWEA);
+ 242               		.loc 1 74 0
+ 243 00cc 84EC      		ldi r24,lo8(-60)
+ 244 00ce 8093 BC00 		sts 188,r24
+ 245               	.L20:
+  75:i2c_master.c  **** 	// wait for end of transmission
+  76:i2c_master.c  **** 	while( !(TWCR & (1<<TWINT)) );
+ 246               		.loc 1 76 0 discriminator 1
+ 247 00d2 8091 BC00 		lds r24,188
+ 248 00d6 87FF      		sbrs r24,7
+ 249 00d8 00C0      		rjmp .L20
+  77:i2c_master.c  **** 	// return received data from TWDR
+  78:i2c_master.c  **** 	return TWDR;
+ 250               		.loc 1 78 0
+ 251 00da 8091 BB00 		lds r24,187
+  79:i2c_master.c  **** }
+ 252               		.loc 1 79 0
+ 253 00de 0895      		ret
+ 254               		.cfi_endproc
+ 255               	.LFE3:
+ 257               	.global	i2c_read_nack
+ 259               	i2c_read_nack:
+ 260               	.LFB4:
+  80:i2c_master.c  **** 
+  81:i2c_master.c  **** uint8_t i2c_read_nack(void)
+  82:i2c_master.c  **** {
+ 261               		.loc 1 82 0
+ 262               		.cfi_startproc
+ 263               	/* prologue: function */
+ 264               	/* frame size = 0 */
+ 265               	/* stack size = 0 */
+ 266               	.L__stack_usage = 0
+  83:i2c_master.c  **** 
+  84:i2c_master.c  **** 	// start receiving without acknowledging reception
+  85:i2c_master.c  **** 	TWCR = (1<<TWINT) | (1<<TWEN);
+ 267               		.loc 1 85 0
+ 268 00e0 84E8      		ldi r24,lo8(-124)
+ 269 00e2 8093 BC00 		sts 188,r24
+ 270               	.L23:
+  86:i2c_master.c  **** 	// wait for end of transmission
+  87:i2c_master.c  **** 	while( !(TWCR & (1<<TWINT)) );
+ 271               		.loc 1 87 0 discriminator 1
+ 272 00e6 8091 BC00 		lds r24,188
+ 273 00ea 87FF      		sbrs r24,7
+ 274 00ec 00C0      		rjmp .L23
+  88:i2c_master.c  **** 	// return received data from TWDR
+  89:i2c_master.c  **** 	return TWDR;
+ 275               		.loc 1 89 0
+ 276 00ee 8091 BB00 		lds r24,187
+  90:i2c_master.c  **** }
+ 277               		.loc 1 90 0
+ 278 00f2 0895      		ret
+ 279               		.cfi_endproc
+ 280               	.LFE4:
+ 282               	.global	i2c_stop
+ 284               	i2c_stop:
+ 285               	.LFB9:
+  91:i2c_master.c  **** 
+  92:i2c_master.c  **** uint8_t i2c_transmit(uint8_t address, uint8_t* data, uint16_t length)
+  93:i2c_master.c  **** {
+  94:i2c_master.c  **** 	if (i2c_start((address<<1) | I2C_WRITE)) return 1;
+  95:i2c_master.c  **** 
+  96:i2c_master.c  **** 	for (uint16_t i = 0; i < length; i++)
+  97:i2c_master.c  **** 	{
+  98:i2c_master.c  **** 		if (i2c_write(data[i])) return 1;
+  99:i2c_master.c  **** 	}
+ 100:i2c_master.c  **** 
+ 101:i2c_master.c  **** 	i2c_stop();
+ 102:i2c_master.c  **** 
+ 103:i2c_master.c  **** 	return 0;
+ 104:i2c_master.c  **** }
+ 105:i2c_master.c  **** 
+ 106:i2c_master.c  **** uint8_t i2c_receive(uint8_t address, uint8_t* data, uint16_t length)
+ 107:i2c_master.c  **** {
+ 108:i2c_master.c  **** 	if (i2c_start((address<<1) | I2C_READ)) return 1;
+ 109:i2c_master.c  **** 
+ 110:i2c_master.c  **** 	for (uint16_t i = 0; i < (length-1); i++)
+ 111:i2c_master.c  **** 	{
+ 112:i2c_master.c  **** 		data[i] = i2c_read_ack();
+ 113:i2c_master.c  **** 	}
+ 114:i2c_master.c  **** 	data[(length-1)] = i2c_read_nack();
+ 115:i2c_master.c  **** 
+ 116:i2c_master.c  **** 	i2c_stop();
+ 117:i2c_master.c  **** 
+ 118:i2c_master.c  **** 	return 0;
+ 119:i2c_master.c  **** }
+ 120:i2c_master.c  **** 
+ 121:i2c_master.c  **** uint8_t i2c_writeReg(uint8_t devaddr, uint8_t regaddr, uint8_t* data, uint16_t length)
+ 122:i2c_master.c  **** {
+ 123:i2c_master.c  **** 	if (i2c_start((devaddr<<1) | 0x00)) return 1;
+ 124:i2c_master.c  **** 
+ 125:i2c_master.c  **** 	i2c_write(regaddr);
+ 126:i2c_master.c  **** 
+ 127:i2c_master.c  **** 	for (uint16_t i = 0; i < length; i++)
+ 128:i2c_master.c  **** 	{
+ 129:i2c_master.c  **** 		if (i2c_write(data[i])) return 1;
+ 130:i2c_master.c  **** 	}
+ 131:i2c_master.c  **** 
+ 132:i2c_master.c  **** 	i2c_stop();
+ 133:i2c_master.c  **** 
+ 134:i2c_master.c  **** 	return 0;
+ 135:i2c_master.c  **** }
+ 136:i2c_master.c  **** 
+ 137:i2c_master.c  **** uint8_t i2c_readReg(uint8_t devaddr, uint8_t regaddr, uint8_t* data, uint16_t length)
+ 138:i2c_master.c  **** {
+ 139:i2c_master.c  **** 	if (i2c_start((devaddr<<1))) return 1;
+ 140:i2c_master.c  **** 
+ 141:i2c_master.c  **** 	i2c_write(regaddr);
+ 142:i2c_master.c  **** 
+ 143:i2c_master.c  **** 	if (i2c_start((devaddr<<1) | 0x01)) return 1;
+ 144:i2c_master.c  **** 
+ 145:i2c_master.c  **** 	for (uint16_t i = 0; i < (length-1); i++)
+ 146:i2c_master.c  **** 	{
+ 147:i2c_master.c  **** 		data[i] = i2c_read_ack();
+ 148:i2c_master.c  **** 	}
+ 149:i2c_master.c  **** 	data[(length-1)] = i2c_read_nack();
+ 150:i2c_master.c  **** 
+ 151:i2c_master.c  **** 	i2c_stop();
+ 152:i2c_master.c  **** 
+ 153:i2c_master.c  **** 	return 0;
+ 154:i2c_master.c  **** }
+ 155:i2c_master.c  **** 
+ 156:i2c_master.c  **** void i2c_stop(void)
+ 157:i2c_master.c  **** {
+ 286               		.loc 1 157 0
+ 287               		.cfi_startproc
+ 288               	/* prologue: function */
+ 289               	/* frame size = 0 */
+ 290               	/* stack size = 0 */
+ 291               	.L__stack_usage = 0
+ 158:i2c_master.c  **** 	// transmit STOP condition
+ 159:i2c_master.c  **** 	TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO);
+ 292               		.loc 1 159 0
+ 293 00f4 84E9      		ldi r24,lo8(-108)
+ 294 00f6 8093 BC00 		sts 188,r24
+ 295               	.L26:
+ 160:i2c_master.c  **** 	while(TWCR & (1<<TWSTO));
+ 296               		.loc 1 160 0 discriminator 1
+ 297 00fa 8091 BC00 		lds r24,188
+ 298 00fe 84FD      		sbrc r24,4
+ 299 0100 00C0      		rjmp .L26
+ 300               	/* epilogue start */
+ 161:i2c_master.c  **** }
+ 301               		.loc 1 161 0
+ 302 0102 0895      		ret
+ 303               		.cfi_endproc
+ 304               	.LFE9:
+ 306               	.global	i2c_transmit
+ 308               	i2c_transmit:
+ 309               	.LFB5:
+  93:i2c_master.c  **** {
+ 310               		.loc 1 93 0
+ 311               		.cfi_startproc
+ 312               	.LVL18:
+ 313 0104 EF92      		push r14
+ 314               	.LCFI13:
+ 315               		.cfi_def_cfa_offset 3
+ 316               		.cfi_offset 14, -2
+ 317 0106 FF92      		push r15
+ 318               	.LCFI14:
+ 319               		.cfi_def_cfa_offset 4
+ 320               		.cfi_offset 15, -3
+ 321 0108 0F93      		push r16
+ 322               	.LCFI15:
+ 323               		.cfi_def_cfa_offset 5
+ 324               		.cfi_offset 16, -4
+ 325 010a 1F93      		push r17
+ 326               	.LCFI16:
+ 327               		.cfi_def_cfa_offset 6
+ 328               		.cfi_offset 17, -5
+ 329 010c CF93      		push r28
+ 330               	.LCFI17:
+ 331               		.cfi_def_cfa_offset 7
+ 332               		.cfi_offset 28, -6
+ 333 010e DF93      		push r29
+ 334               	.LCFI18:
+ 335               		.cfi_def_cfa_offset 8
+ 336               		.cfi_offset 29, -7
+ 337 0110 00D0      		rcall .
+ 338               	.LCFI19:
+ 339               		.cfi_def_cfa_offset 10
+ 340 0112 CDB7      		in r28,__SP_L__
+ 341 0114 DEB7      		in r29,__SP_H__
+ 342               	.LCFI20:
+ 343               		.cfi_def_cfa_register 28
+ 344               	/* prologue: function */
+ 345               	/* frame size = 2 */
+ 346               	/* stack size = 8 */
+ 347               	.L__stack_usage = 8
+ 348 0116 8A01      		movw r16,r20
+  94:i2c_master.c  **** 	if (i2c_start((address<<1) | I2C_WRITE)) return 1;
+ 349               		.loc 1 94 0
+ 350 0118 880F      		lsl r24
+ 351               	.LVL19:
+ 352 011a 6983      		std Y+1,r22
+ 353 011c 7A83      		std Y+2,r23
+ 354 011e 0E94 0000 		call i2c_start
+ 355               	.LVL20:
+ 356 0122 6981      		ldd r22,Y+1
+ 357 0124 7A81      		ldd r23,Y+2
+ 358 0126 8111      		cpse r24,__zero_reg__
+ 359 0128 00C0      		rjmp .L28
+ 360 012a 7B01      		movw r14,r22
+ 361 012c 0E0D      		add r16,r14
+ 362 012e 1F1D      		adc r17,r15
+ 363               	.LVL21:
+ 364               	.L29:
+ 365               	.LBB21:
+  96:i2c_master.c  **** 	for (uint16_t i = 0; i < length; i++)
+ 366               		.loc 1 96 0 discriminator 1
+ 367 0130 E016      		cp r14,r16
+ 368 0132 F106      		cpc r15,r17
+ 369 0134 01F0      		breq .L32
+  98:i2c_master.c  **** 		if (i2c_write(data[i])) return 1;
+ 370               		.loc 1 98 0
+ 371 0136 F701      		movw r30,r14
+ 372 0138 8191      		ld r24,Z+
+ 373 013a 7F01      		movw r14,r30
+ 374               	.LVL22:
+ 375 013c 0E94 0000 		call i2c_write
+ 376               	.LVL23:
+ 377 0140 8823      		tst r24
+ 378 0142 01F0      		breq .L29
+ 379               	.LVL24:
+ 380               	.L28:
+ 381               	.LBE21:
+  94:i2c_master.c  **** 	if (i2c_start((address<<1) | I2C_WRITE)) return 1;
+ 382               		.loc 1 94 0
+ 383 0144 81E0      		ldi r24,lo8(1)
+ 384 0146 00C0      		rjmp .L30
+ 385               	.LVL25:
+ 386               	.L32:
+ 101:i2c_master.c  **** 	i2c_stop();
+ 387               		.loc 1 101 0
+ 388 0148 0E94 0000 		call i2c_stop
+ 389               	.LVL26:
+ 103:i2c_master.c  **** 	return 0;
+ 390               		.loc 1 103 0
+ 391 014c 80E0      		ldi r24,0
+ 392               	.LVL27:
+ 393               	.L30:
+ 394               	/* epilogue start */
+ 104:i2c_master.c  **** }
+ 395               		.loc 1 104 0
+ 396 014e 0F90      		pop __tmp_reg__
+ 397 0150 0F90      		pop __tmp_reg__
+ 398 0152 DF91      		pop r29
+ 399 0154 CF91      		pop r28
+ 400 0156 1F91      		pop r17
+ 401 0158 0F91      		pop r16
+ 402 015a FF90      		pop r15
+ 403 015c EF90      		pop r14
+ 404 015e 0895      		ret
+ 405               		.cfi_endproc
+ 406               	.LFE5:
+ 408               	.global	i2c_receive
+ 410               	i2c_receive:
+ 411               	.LFB6:
+ 107:i2c_master.c  **** {
+ 412               		.loc 1 107 0
+ 413               		.cfi_startproc
+ 414               	.LVL28:
+ 415 0160 EF92      		push r14
+ 416               	.LCFI21:
+ 417               		.cfi_def_cfa_offset 3
+ 418               		.cfi_offset 14, -2
+ 419 0162 FF92      		push r15
+ 420               	.LCFI22:
+ 421               		.cfi_def_cfa_offset 4
+ 422               		.cfi_offset 15, -3
+ 423 0164 0F93      		push r16
+ 424               	.LCFI23:
+ 425               		.cfi_def_cfa_offset 5
+ 426               		.cfi_offset 16, -4
+ 427 0166 1F93      		push r17
+ 428               	.LCFI24:
+ 429               		.cfi_def_cfa_offset 6
+ 430               		.cfi_offset 17, -5
+ 431 0168 CF93      		push r28
+ 432               	.LCFI25:
+ 433               		.cfi_def_cfa_offset 7
+ 434               		.cfi_offset 28, -6
+ 435 016a DF93      		push r29
+ 436               	.LCFI26:
+ 437               		.cfi_def_cfa_offset 8
+ 438               		.cfi_offset 29, -7
+ 439               	/* prologue: function */
+ 440               	/* frame size = 0 */
+ 441               	/* stack size = 6 */
+ 442               	.L__stack_usage = 6
+ 443 016c EB01      		movw r28,r22
+ 444 016e 7A01      		movw r14,r20
+ 108:i2c_master.c  **** 	if (i2c_start((address<<1) | I2C_READ)) return 1;
+ 445               		.loc 1 108 0
+ 446 0170 880F      		lsl r24
+ 447               	.LVL29:
+ 448 0172 8160      		ori r24,lo8(1)
+ 449 0174 0E94 0000 		call i2c_start
+ 450               	.LVL30:
+ 451 0178 8111      		cpse r24,__zero_reg__
+ 452 017a 00C0      		rjmp .L37
+ 453 017c 8E01      		movw r16,r28
+ 454               	.LBB22:
+ 110:i2c_master.c  **** 	for (uint16_t i = 0; i < (length-1); i++)
+ 455               		.loc 1 110 0
+ 456 017e 81E0      		ldi r24,1
+ 457 0180 E81A      		sub r14,r24
+ 458 0182 F108      		sbc r15,__zero_reg__
+ 459               	.LVL31:
+ 460               	.L35:
+ 461 0184 C801      		movw r24,r16
+ 462 0186 8C1B      		sub r24,r28
+ 463 0188 9D0B      		sbc r25,r29
+ 464               	.LVL32:
+ 110:i2c_master.c  **** 	for (uint16_t i = 0; i < (length-1); i++)
+ 465               		.loc 1 110 0 is_stmt 0 discriminator 1
+ 466 018a 8E15      		cp r24,r14
+ 467 018c 9F05      		cpc r25,r15
+ 468 018e 00F4      		brsh .L38
+ 112:i2c_master.c  **** 		data[i] = i2c_read_ack();
+ 469               		.loc 1 112 0 is_stmt 1 discriminator 2
+ 470 0190 0E94 0000 		call i2c_read_ack
+ 471               	.LVL33:
+ 472 0194 F801      		movw r30,r16
+ 473 0196 8193      		st Z+,r24
+ 474 0198 8F01      		movw r16,r30
+ 475               	.LVL34:
+ 476 019a 00C0      		rjmp .L35
+ 477               	.LVL35:
+ 478               	.L38:
+ 479               	.LBE22:
+ 114:i2c_master.c  **** 	data[(length-1)] = i2c_read_nack();
+ 480               		.loc 1 114 0
+ 481 019c CE0D      		add r28,r14
+ 482 019e DF1D      		adc r29,r15
+ 483               	.LVL36:
+ 484 01a0 0E94 0000 		call i2c_read_nack
+ 485               	.LVL37:
+ 486 01a4 8883      		st Y,r24
+ 116:i2c_master.c  **** 	i2c_stop();
+ 487               		.loc 1 116 0
+ 488 01a6 0E94 0000 		call i2c_stop
+ 489               	.LVL38:
+ 118:i2c_master.c  **** 	return 0;
+ 490               		.loc 1 118 0
+ 491 01aa 80E0      		ldi r24,0
+ 492 01ac 00C0      		rjmp .L34
+ 493               	.LVL39:
+ 494               	.L37:
+ 108:i2c_master.c  **** 	if (i2c_start((address<<1) | I2C_READ)) return 1;
+ 495               		.loc 1 108 0
+ 496 01ae 81E0      		ldi r24,lo8(1)
+ 497               	.LVL40:
+ 498               	.L34:
+ 499               	/* epilogue start */
+ 119:i2c_master.c  **** }
+ 500               		.loc 1 119 0
+ 501 01b0 DF91      		pop r29
+ 502 01b2 CF91      		pop r28
+ 503 01b4 1F91      		pop r17
+ 504 01b6 0F91      		pop r16
+ 505 01b8 FF90      		pop r15
+ 506 01ba EF90      		pop r14
+ 507 01bc 0895      		ret
+ 508               		.cfi_endproc
+ 509               	.LFE6:
+ 511               	.global	i2c_writeReg
+ 513               	i2c_writeReg:
+ 514               	.LFB7:
+ 122:i2c_master.c  **** {
+ 515               		.loc 1 122 0
+ 516               		.cfi_startproc
+ 517               	.LVL41:
+ 518 01be CF92      		push r12
+ 519               	.LCFI27:
+ 520               		.cfi_def_cfa_offset 3
+ 521               		.cfi_offset 12, -2
+ 522 01c0 DF92      		push r13
+ 523               	.LCFI28:
+ 524               		.cfi_def_cfa_offset 4
+ 525               		.cfi_offset 13, -3
+ 526 01c2 EF92      		push r14
+ 527               	.LCFI29:
+ 528               		.cfi_def_cfa_offset 5
+ 529               		.cfi_offset 14, -4
+ 530 01c4 FF92      		push r15
+ 531               	.LCFI30:
+ 532               		.cfi_def_cfa_offset 6
+ 533               		.cfi_offset 15, -5
+ 534 01c6 0F93      		push r16
+ 535               	.LCFI31:
+ 536               		.cfi_def_cfa_offset 7
+ 537               		.cfi_offset 16, -6
+ 538 01c8 1F93      		push r17
+ 539               	.LCFI32:
+ 540               		.cfi_def_cfa_offset 8
+ 541               		.cfi_offset 17, -7
+ 542 01ca CF93      		push r28
+ 543               	.LCFI33:
+ 544               		.cfi_def_cfa_offset 9
+ 545               		.cfi_offset 28, -8
+ 546 01cc DF93      		push r29
+ 547               	.LCFI34:
+ 548               		.cfi_def_cfa_offset 10
+ 549               		.cfi_offset 29, -9
+ 550 01ce 1F92      		push __zero_reg__
+ 551               	.LCFI35:
+ 552               		.cfi_def_cfa_offset 11
+ 553 01d0 CDB7      		in r28,__SP_L__
+ 554 01d2 DEB7      		in r29,__SP_H__
+ 555               	.LCFI36:
+ 556               		.cfi_def_cfa_register 28
+ 557               	/* prologue: function */
+ 558               	/* frame size = 1 */
+ 559               	/* stack size = 9 */
+ 560               	.L__stack_usage = 9
+ 561 01d4 7A01      		movw r14,r20
+ 562 01d6 8901      		movw r16,r18
+ 123:i2c_master.c  **** 	if (i2c_start((devaddr<<1) | 0x00)) return 1;
+ 563               		.loc 1 123 0
+ 564 01d8 880F      		lsl r24
+ 565               	.LVL42:
+ 566 01da 6983      		std Y+1,r22
+ 567 01dc 0E94 0000 		call i2c_start
+ 568               	.LVL43:
+ 569 01e0 6981      		ldd r22,Y+1
+ 570 01e2 8823      		tst r24
+ 571 01e4 01F0      		breq .L40
+ 572               	.LVL44:
+ 573               	.L43:
+ 574 01e6 81E0      		ldi r24,lo8(1)
+ 575 01e8 00C0      		rjmp .L41
+ 576               	.LVL45:
+ 577               	.L40:
+ 125:i2c_master.c  **** 	i2c_write(regaddr);
+ 578               		.loc 1 125 0
+ 579 01ea 862F      		mov r24,r22
+ 580 01ec 0E94 0000 		call i2c_write
+ 581               	.LVL46:
+ 582 01f0 6701      		movw r12,r14
+ 583 01f2 0E0D      		add r16,r14
+ 584 01f4 1F1D      		adc r17,r15
+ 585               	.LVL47:
+ 586               	.L42:
+ 587               	.LBB23:
+ 127:i2c_master.c  **** 	for (uint16_t i = 0; i < length; i++)
+ 588               		.loc 1 127 0 discriminator 1
+ 589 01f6 C016      		cp r12,r16
+ 590 01f8 D106      		cpc r13,r17
+ 591 01fa 01F0      		breq .L45
+ 129:i2c_master.c  **** 		if (i2c_write(data[i])) return 1;
+ 592               		.loc 1 129 0
+ 593 01fc F601      		movw r30,r12
+ 594 01fe 8191      		ld r24,Z+
+ 595 0200 6F01      		movw r12,r30
+ 596               	.LVL48:
+ 597 0202 0E94 0000 		call i2c_write
+ 598               	.LVL49:
+ 599 0206 8823      		tst r24
+ 600 0208 01F0      		breq .L42
+ 601 020a 00C0      		rjmp .L43
+ 602               	.LVL50:
+ 603               	.L45:
+ 604               	.LBE23:
+ 132:i2c_master.c  **** 	i2c_stop();
+ 605               		.loc 1 132 0
+ 606 020c 0E94 0000 		call i2c_stop
+ 607               	.LVL51:
+ 134:i2c_master.c  **** 	return 0;
+ 608               		.loc 1 134 0
+ 609 0210 80E0      		ldi r24,0
+ 610               	.LVL52:
+ 611               	.L41:
+ 612               	/* epilogue start */
+ 135:i2c_master.c  **** }
+ 613               		.loc 1 135 0
+ 614 0212 0F90      		pop __tmp_reg__
+ 615 0214 DF91      		pop r29
+ 616 0216 CF91      		pop r28
+ 617 0218 1F91      		pop r17
+ 618 021a 0F91      		pop r16
+ 619 021c FF90      		pop r15
+ 620 021e EF90      		pop r14
+ 621               	.LVL53:
+ 622 0220 DF90      		pop r13
+ 623 0222 CF90      		pop r12
+ 624 0224 0895      		ret
+ 625               		.cfi_endproc
+ 626               	.LFE7:
+ 628               	.global	i2c_readReg
+ 630               	i2c_readReg:
+ 631               	.LFB8:
+ 138:i2c_master.c  **** {
+ 632               		.loc 1 138 0
+ 633               		.cfi_startproc
+ 634               	.LVL54:
+ 635 0226 CF92      		push r12
+ 636               	.LCFI37:
+ 637               		.cfi_def_cfa_offset 3
+ 638               		.cfi_offset 12, -2
+ 639 0228 DF92      		push r13
+ 640               	.LCFI38:
+ 641               		.cfi_def_cfa_offset 4
+ 642               		.cfi_offset 13, -3
+ 643 022a EF92      		push r14
+ 644               	.LCFI39:
+ 645               		.cfi_def_cfa_offset 5
+ 646               		.cfi_offset 14, -4
+ 647 022c FF92      		push r15
+ 648               	.LCFI40:
+ 649               		.cfi_def_cfa_offset 6
+ 650               		.cfi_offset 15, -5
+ 651 022e 0F93      		push r16
+ 652               	.LCFI41:
+ 653               		.cfi_def_cfa_offset 7
+ 654               		.cfi_offset 16, -6
+ 655 0230 1F93      		push r17
+ 656               	.LCFI42:
+ 657               		.cfi_def_cfa_offset 8
+ 658               		.cfi_offset 17, -7
+ 659 0232 CF93      		push r28
+ 660               	.LCFI43:
+ 661               		.cfi_def_cfa_offset 9
+ 662               		.cfi_offset 28, -8
+ 663 0234 DF93      		push r29
+ 664               	.LCFI44:
+ 665               		.cfi_def_cfa_offset 10
+ 666               		.cfi_offset 29, -9
+ 667 0236 1F92      		push __zero_reg__
+ 668               	.LCFI45:
+ 669               		.cfi_def_cfa_offset 11
+ 670 0238 CDB7      		in r28,__SP_L__
+ 671 023a DEB7      		in r29,__SP_H__
+ 672               	.LCFI46:
+ 673               		.cfi_def_cfa_register 28
+ 674               	/* prologue: function */
+ 675               	/* frame size = 1 */
+ 676               	/* stack size = 9 */
+ 677               	.L__stack_usage = 9
+ 678 023c 182F      		mov r17,r24
+ 679 023e 6A01      		movw r12,r20
+ 680 0240 7901      		movw r14,r18
+ 139:i2c_master.c  **** 	if (i2c_start((devaddr<<1))) return 1;
+ 681               		.loc 1 139 0
+ 682 0242 880F      		lsl r24
+ 683               	.LVL55:
+ 684 0244 6983      		std Y+1,r22
+ 685 0246 0E94 0000 		call i2c_start
+ 686               	.LVL56:
+ 687 024a 6981      		ldd r22,Y+1
+ 688 024c 8823      		tst r24
+ 689 024e 01F0      		breq .L47
+ 690               	.L49:
+ 691 0250 81E0      		ldi r24,lo8(1)
+ 692 0252 00C0      		rjmp .L48
+ 693               	.L47:
+ 141:i2c_master.c  **** 	i2c_write(regaddr);
+ 694               		.loc 1 141 0
+ 695 0254 862F      		mov r24,r22
+ 696 0256 0E94 0000 		call i2c_write
+ 697               	.LVL57:
+ 143:i2c_master.c  **** 	if (i2c_start((devaddr<<1) | 0x01)) return 1;
+ 698               		.loc 1 143 0
+ 699 025a 812F      		mov r24,r17
+ 700 025c 880F      		lsl r24
+ 701 025e 8160      		ori r24,lo8(1)
+ 702 0260 0E94 0000 		call i2c_start
+ 703               	.LVL58:
+ 704 0264 8111      		cpse r24,__zero_reg__
+ 705 0266 00C0      		rjmp .L49
+ 706 0268 8601      		movw r16,r12
+ 707               	.LBB24:
+ 145:i2c_master.c  **** 	for (uint16_t i = 0; i < (length-1); i++)
+ 708               		.loc 1 145 0
+ 709 026a 81E0      		ldi r24,1
+ 710 026c E81A      		sub r14,r24
+ 711 026e F108      		sbc r15,__zero_reg__
+ 712               	.LVL59:
+ 713               	.L50:
+ 714 0270 C801      		movw r24,r16
+ 715 0272 8C19      		sub r24,r12
+ 716 0274 9D09      		sbc r25,r13
+ 717               	.LVL60:
+ 145:i2c_master.c  **** 	for (uint16_t i = 0; i < (length-1); i++)
+ 718               		.loc 1 145 0 is_stmt 0 discriminator 1
+ 719 0276 8E15      		cp r24,r14
+ 720 0278 9F05      		cpc r25,r15
+ 721 027a 00F4      		brsh .L52
+ 147:i2c_master.c  **** 		data[i] = i2c_read_ack();
+ 722               		.loc 1 147 0 is_stmt 1 discriminator 2
+ 723 027c 0E94 0000 		call i2c_read_ack
+ 724               	.LVL61:
+ 725 0280 F801      		movw r30,r16
+ 726 0282 8193      		st Z+,r24
+ 727 0284 8F01      		movw r16,r30
+ 728               	.LVL62:
+ 729 0286 00C0      		rjmp .L50
+ 730               	.LVL63:
+ 731               	.L52:
+ 732               	.LBE24:
+ 149:i2c_master.c  **** 	data[(length-1)] = i2c_read_nack();
+ 733               		.loc 1 149 0
+ 734 0288 EC0C      		add r14,r12
+ 735 028a FD1C      		adc r15,r13
+ 736               	.LVL64:
+ 737 028c 0E94 0000 		call i2c_read_nack
+ 738               	.LVL65:
+ 739 0290 F701      		movw r30,r14
+ 740 0292 8083      		st Z,r24
+ 151:i2c_master.c  **** 	i2c_stop();
+ 741               		.loc 1 151 0
+ 742 0294 0E94 0000 		call i2c_stop
+ 743               	.LVL66:
+ 153:i2c_master.c  **** 	return 0;
+ 744               		.loc 1 153 0
+ 745 0298 80E0      		ldi r24,0
+ 746               	.LVL67:
+ 747               	.L48:
+ 748               	/* epilogue start */
+ 154:i2c_master.c  **** }
+ 749               		.loc 1 154 0
+ 750 029a 0F90      		pop __tmp_reg__
+ 751 029c DF91      		pop r29
+ 752 029e CF91      		pop r28
+ 753 02a0 1F91      		pop r17
+ 754               	.LVL68:
+ 755 02a2 0F91      		pop r16
+ 756 02a4 FF90      		pop r15
+ 757 02a6 EF90      		pop r14
+ 758 02a8 DF90      		pop r13
+ 759 02aa CF90      		pop r12
+ 760               	.LVL69:
+ 761 02ac 0895      		ret
+ 762               		.cfi_endproc
+ 763               	.LFE8:
+ 765               	.Letext0:
+ 766               		.file 2 "/usr/lib/avr/include/stdint.h"
+ 767               		.file 3 "<built-in>"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 i2c_master.c
+     /tmp/ccMe7Y7C.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccMe7Y7C.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccMe7Y7C.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccMe7Y7C.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccMe7Y7C.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccMe7Y7C.s:12     .text:0000000000000000 i2c_init
+     /tmp/ccMe7Y7C.s:46     .text:0000000000000018 i2c_start
+     /tmp/ccMe7Y7C.s:165    .text:000000000000008a i2c_write
+     /tmp/ccMe7Y7C.s:234    .text:00000000000000cc i2c_read_ack
+     /tmp/ccMe7Y7C.s:259    .text:00000000000000e0 i2c_read_nack
+     /tmp/ccMe7Y7C.s:284    .text:00000000000000f4 i2c_stop
+     /tmp/ccMe7Y7C.s:308    .text:0000000000000104 i2c_transmit
+     /tmp/ccMe7Y7C.s:410    .text:0000000000000160 i2c_receive
+     /tmp/ccMe7Y7C.s:513    .text:00000000000001be i2c_writeReg
+     /tmp/ccMe7Y7C.s:630    .text:0000000000000226 i2c_readReg
+
+UNDEFINED SYMBOLS
+printf
+__do_copy_data

@@ -1,0 +1,505 @@
+   1               		.file	"serial.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	uart_putchar
+  12               	uart_putchar:
+  13               	.LFB5:
+  14               		.file 1 "serial.c"
+   1:serial.c      **** #include "serial.h"
+   2:serial.c      **** #include <avr/interrupt.h>
+   3:serial.c      **** 
+   4:serial.c      **** FILE uartfile = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
+   5:serial.c      **** 
+   6:serial.c      **** volatile uint8_t uart_tx_buf[UART_BUF_LEN];
+   7:serial.c      **** volatile uint8_t uart_rx_buf[UART_BUF_LEN];
+   8:serial.c      **** uint8_t uart_tx_write_ptr = 0;
+   9:serial.c      **** uint8_t uart_tx_read_ptr = 0;
+  10:serial.c      **** volatile uint8_t uart_tx_len = 0;
+  11:serial.c      **** uint8_t uart_rx_write_ptr = 0;
+  12:serial.c      **** uint8_t uart_rx_read_ptr = 0;
+  13:serial.c      **** volatile uint8_t uart_rx_len = 0;
+  14:serial.c      **** 
+  15:serial.c      **** void uart_init(uint8_t enabled) {
+  16:serial.c      ****     UBRR0H = (BAUDRATE>>8); // set baud rate
+  17:serial.c      ****     UBRR0L = BAUDRATE;
+  18:serial.c      ****     UCSR0B = enabled | (1<<RXCIE0); // enable receiver and transmitter
+  19:serial.c      ****     UCSR0C = (1<<UCSZ00)|(1<<UCSZ01);   // 8bit data format
+  20:serial.c      **** 
+  21:serial.c      **** }
+  22:serial.c      **** 
+  23:serial.c      **** void uart_write(uint8_t data) {
+  24:serial.c      ****     while(!(UCSR0A & (1<<UDRE0)));
+  25:serial.c      ****     UDR0 = data;
+  26:serial.c      **** }
+  27:serial.c      **** 
+  28:serial.c      **** uint8_t uart_available(void) {
+  29:serial.c      ****     //return (UCSR0A & (1<<RXC0))!=0;
+  30:serial.c      ****     return uart_rx_len;
+  31:serial.c      **** }
+  32:serial.c      **** 
+  33:serial.c      **** uint8_t uart_read(void) {
+  34:serial.c      ****     while(!(UCSR0A & (1<<RXC0)));                   // wait while data is being received
+  35:serial.c      ****     return UDR0;                                   // return 8-bit data
+  36:serial.c      **** }
+  37:serial.c      **** 
+  38:serial.c      **** int uart_putchar(char var, FILE *stream) {
+  15               		.loc 1 38 0
+  16               		.cfi_startproc
+  17               	/* prologue: function */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+  21               	.LVL0:
+  22               	.L3:
+  39:serial.c      ****     while(uart_tx_len>=UART_BUF_LEN);
+  23               		.loc 1 39 0 discriminator 1
+  24 0000 9091 0000 		lds r25,uart_tx_len
+  25 0004 9032      		cpi r25,lo8(32)
+  26 0006 00F4      		brsh .L3
+  40:serial.c      ****     uart_tx_buf[uart_tx_write_ptr++] = (uint8_t)var;
+  27               		.loc 1 40 0
+  28 0008 9091 0000 		lds r25,uart_tx_write_ptr
+  29 000c E92F      		mov r30,r25
+  30 000e F0E0      		ldi r31,0
+  31 0010 E050      		subi r30,lo8(-(uart_tx_buf))
+  32 0012 F040      		sbci r31,hi8(-(uart_tx_buf))
+  33 0014 8083      		st Z,r24
+  34 0016 81E0      		ldi r24,lo8(1)
+  35               	.LVL1:
+  36 0018 890F      		add r24,r25
+  41:serial.c      ****     uart_tx_write_ptr &= UART_BUF_MASK;
+  37               		.loc 1 41 0
+  38 001a 8F71      		andi r24,lo8(31)
+  39 001c 8093 0000 		sts uart_tx_write_ptr,r24
+  42:serial.c      ****     uart_tx_len++;
+  40               		.loc 1 42 0
+  41 0020 8091 0000 		lds r24,uart_tx_len
+  42 0024 8F5F      		subi r24,lo8(-(1))
+  43 0026 8093 0000 		sts uart_tx_len,r24
+  44               	.LVL2:
+  43:serial.c      ****     UCSR0B |= (1<<UDRIE0); // Enable TX empty interrupt
+  45               		.loc 1 43 0
+  46 002a 8091 C100 		lds r24,193
+  47 002e 8062      		ori r24,lo8(32)
+  48 0030 8093 C100 		sts 193,r24
+  44:serial.c      ****     //uart_write((uint8_t)var);
+  45:serial.c      ****     return 0;
+  46:serial.c      **** }
+  49               		.loc 1 46 0
+  50 0034 80E0      		ldi r24,0
+  51 0036 90E0      		ldi r25,0
+  52 0038 0895      		ret
+  53               		.cfi_endproc
+  54               	.LFE5:
+  56               	.global	uart_getchar
+  58               	uart_getchar:
+  59               	.LFB6:
+  47:serial.c      **** 
+  48:serial.c      **** int uart_getchar(FILE *stream) {
+  60               		.loc 1 48 0
+  61               		.cfi_startproc
+  62               	/* prologue: function */
+  63               	/* frame size = 0 */
+  64               	/* stack size = 0 */
+  65               	.L__stack_usage = 0
+  66               	.LVL3:
+  67               	.L7:
+  49:serial.c      ****     while(uart_rx_len==0);
+  68               		.loc 1 49 0 discriminator 1
+  69 003a 8091 0000 		lds r24,uart_rx_len
+  70 003e 8823      		tst r24
+  71 0040 01F0      		breq .L7
+  50:serial.c      ****     uint8_t val = uart_rx_buf[uart_rx_read_ptr++];
+  72               		.loc 1 50 0
+  73 0042 9091 0000 		lds r25,uart_rx_read_ptr
+  74 0046 E92F      		mov r30,r25
+  75 0048 F0E0      		ldi r31,0
+  76 004a E050      		subi r30,lo8(-(uart_rx_buf))
+  77 004c F040      		sbci r31,hi8(-(uart_rx_buf))
+  78 004e 8081      		ld r24,Z
+  79               	.LVL4:
+  80 0050 9F5F      		subi r25,lo8(-(1))
+  51:serial.c      ****     uart_rx_read_ptr &= UART_BUF_MASK;
+  81               		.loc 1 51 0
+  82 0052 9F71      		andi r25,lo8(31)
+  83 0054 9093 0000 		sts uart_rx_read_ptr,r25
+  52:serial.c      ****     uart_rx_len--;
+  84               		.loc 1 52 0
+  85 0058 9091 0000 		lds r25,uart_rx_len
+  86 005c 9150      		subi r25,lo8(-(-1))
+  87 005e 9093 0000 		sts uart_rx_len,r25
+  53:serial.c      ****     return val;
+  54:serial.c      ****     //return uart_read();
+  55:serial.c      **** }
+  88               		.loc 1 55 0
+  89 0062 90E0      		ldi r25,0
+  90 0064 0895      		ret
+  91               		.cfi_endproc
+  92               	.LFE6:
+  94               	.global	uart_init
+  96               	uart_init:
+  97               	.LFB1:
+  15:serial.c      **** void uart_init(uint8_t enabled) {
+  98               		.loc 1 15 0
+  99               		.cfi_startproc
+ 100               	.LVL5:
+ 101               	/* prologue: function */
+ 102               	/* frame size = 0 */
+ 103               	/* stack size = 0 */
+ 104               	.L__stack_usage = 0
+  16:serial.c      ****     UBRR0H = (BAUDRATE>>8); // set baud rate
+ 105               		.loc 1 16 0
+ 106 0066 1092 C500 		sts 197,__zero_reg__
+  17:serial.c      ****     UBRR0L = BAUDRATE;
+ 107               		.loc 1 17 0
+ 108 006a 97E6      		ldi r25,lo8(103)
+ 109 006c 9093 C400 		sts 196,r25
+  18:serial.c      ****     UCSR0B = enabled | (1<<RXCIE0); // enable receiver and transmitter
+ 110               		.loc 1 18 0
+ 111 0070 8068      		ori r24,lo8(-128)
+ 112               	.LVL6:
+ 113 0072 8093 C100 		sts 193,r24
+  19:serial.c      ****     UCSR0C = (1<<UCSZ00)|(1<<UCSZ01);   // 8bit data format
+ 114               		.loc 1 19 0
+ 115 0076 86E0      		ldi r24,lo8(6)
+ 116 0078 8093 C200 		sts 194,r24
+ 117 007c 0895      		ret
+ 118               		.cfi_endproc
+ 119               	.LFE1:
+ 121               	.global	uart_write
+ 123               	uart_write:
+ 124               	.LFB2:
+  23:serial.c      **** void uart_write(uint8_t data) {
+ 125               		.loc 1 23 0
+ 126               		.cfi_startproc
+ 127               	/* prologue: function */
+ 128               	/* frame size = 0 */
+ 129               	/* stack size = 0 */
+ 130               	.L__stack_usage = 0
+ 131               	.LVL7:
+ 132               	.L11:
+  24:serial.c      ****     while(!(UCSR0A & (1<<UDRE0)));
+ 133               		.loc 1 24 0 discriminator 1
+ 134 007e 9091 C000 		lds r25,192
+ 135 0082 95FF      		sbrs r25,5
+ 136 0084 00C0      		rjmp .L11
+  25:serial.c      ****     UDR0 = data;
+ 137               		.loc 1 25 0
+ 138 0086 8093 C600 		sts 198,r24
+ 139 008a 0895      		ret
+ 140               		.cfi_endproc
+ 141               	.LFE2:
+ 143               	.global	uart_available
+ 145               	uart_available:
+ 146               	.LFB3:
+  28:serial.c      **** uint8_t uart_available(void) {
+ 147               		.loc 1 28 0
+ 148               		.cfi_startproc
+ 149               	/* prologue: function */
+ 150               	/* frame size = 0 */
+ 151               	/* stack size = 0 */
+ 152               	.L__stack_usage = 0
+  30:serial.c      ****     return uart_rx_len;
+ 153               		.loc 1 30 0
+ 154 008c 8091 0000 		lds r24,uart_rx_len
+  31:serial.c      **** }
+ 155               		.loc 1 31 0
+ 156 0090 0895      		ret
+ 157               		.cfi_endproc
+ 158               	.LFE3:
+ 160               	.global	uart_read
+ 162               	uart_read:
+ 163               	.LFB4:
+  33:serial.c      **** uint8_t uart_read(void) {
+ 164               		.loc 1 33 0
+ 165               		.cfi_startproc
+ 166               	/* prologue: function */
+ 167               	/* frame size = 0 */
+ 168               	/* stack size = 0 */
+ 169               	.L__stack_usage = 0
+ 170               	.L15:
+  34:serial.c      ****     while(!(UCSR0A & (1<<RXC0)));                   // wait while data is being received
+ 171               		.loc 1 34 0 discriminator 1
+ 172 0092 8091 C000 		lds r24,192
+ 173 0096 87FF      		sbrs r24,7
+ 174 0098 00C0      		rjmp .L15
+  35:serial.c      ****     return UDR0;                                   // return 8-bit data
+ 175               		.loc 1 35 0
+ 176 009a 8091 C600 		lds r24,198
+  36:serial.c      **** }
+ 177               		.loc 1 36 0
+ 178 009e 0895      		ret
+ 179               		.cfi_endproc
+ 180               	.LFE4:
+ 182               	.global	__vector_20
+ 184               	__vector_20:
+ 185               	.LFB7:
+  56:serial.c      **** 
+  57:serial.c      **** ISR(USART_TX_vect) {
+ 186               		.loc 1 57 0
+ 187               		.cfi_startproc
+ 188 00a0 1F92      		push r1
+ 189               	.LCFI0:
+ 190               		.cfi_def_cfa_offset 3
+ 191               		.cfi_offset 1, -2
+ 192 00a2 0F92      		push r0
+ 193               	.LCFI1:
+ 194               		.cfi_def_cfa_offset 4
+ 195               		.cfi_offset 0, -3
+ 196 00a4 0FB6      		in r0,__SREG__
+ 197 00a6 0F92      		push r0
+ 198 00a8 1124      		clr __zero_reg__
+ 199               	/* prologue: Signal */
+ 200               	/* frame size = 0 */
+ 201               	/* stack size = 3 */
+ 202               	.L__stack_usage = 3
+ 203               	/* epilogue start */
+  58:serial.c      **** }
+ 204               		.loc 1 58 0
+ 205 00aa 0F90      		pop r0
+ 206 00ac 0FBE      		out __SREG__,r0
+ 207 00ae 0F90      		pop r0
+ 208 00b0 1F90      		pop r1
+ 209 00b2 1895      		reti
+ 210               		.cfi_endproc
+ 211               	.LFE7:
+ 213               	.global	__vector_18
+ 215               	__vector_18:
+ 216               	.LFB8:
+  59:serial.c      **** 
+  60:serial.c      **** ISR(USART_RX_vect) {
+ 217               		.loc 1 60 0
+ 218               		.cfi_startproc
+ 219 00b4 1F92      		push r1
+ 220               	.LCFI2:
+ 221               		.cfi_def_cfa_offset 3
+ 222               		.cfi_offset 1, -2
+ 223 00b6 0F92      		push r0
+ 224               	.LCFI3:
+ 225               		.cfi_def_cfa_offset 4
+ 226               		.cfi_offset 0, -3
+ 227 00b8 0FB6      		in r0,__SREG__
+ 228 00ba 0F92      		push r0
+ 229 00bc 1124      		clr __zero_reg__
+ 230 00be 8F93      		push r24
+ 231               	.LCFI4:
+ 232               		.cfi_def_cfa_offset 5
+ 233               		.cfi_offset 24, -4
+ 234 00c0 9F93      		push r25
+ 235               	.LCFI5:
+ 236               		.cfi_def_cfa_offset 6
+ 237               		.cfi_offset 25, -5
+ 238 00c2 EF93      		push r30
+ 239               	.LCFI6:
+ 240               		.cfi_def_cfa_offset 7
+ 241               		.cfi_offset 30, -6
+ 242 00c4 FF93      		push r31
+ 243               	.LCFI7:
+ 244               		.cfi_def_cfa_offset 8
+ 245               		.cfi_offset 31, -7
+ 246               	/* prologue: Signal */
+ 247               	/* frame size = 0 */
+ 248               	/* stack size = 7 */
+ 249               	.L__stack_usage = 7
+  61:serial.c      ****     if(uart_rx_len<=UART_BUF_LEN) {
+ 250               		.loc 1 61 0
+ 251 00c6 8091 0000 		lds r24,uart_rx_len
+ 252 00ca 8132      		cpi r24,lo8(33)
+ 253 00cc 00F4      		brsh .L18
+  62:serial.c      ****         uart_rx_buf[uart_rx_write_ptr++] = UDR0;
+ 254               		.loc 1 62 0
+ 255 00ce E091 0000 		lds r30,uart_rx_write_ptr
+ 256 00d2 81E0      		ldi r24,lo8(1)
+ 257 00d4 8E0F      		add r24,r30
+ 258 00d6 8093 0000 		sts uart_rx_write_ptr,r24
+ 259 00da F0E0      		ldi r31,0
+ 260 00dc 9091 C600 		lds r25,198
+ 261 00e0 E050      		subi r30,lo8(-(uart_rx_buf))
+ 262 00e2 F040      		sbci r31,hi8(-(uart_rx_buf))
+ 263 00e4 9083      		st Z,r25
+  63:serial.c      ****         uart_rx_write_ptr &= UART_BUF_MASK;
+ 264               		.loc 1 63 0
+ 265 00e6 8F71      		andi r24,lo8(31)
+ 266 00e8 8093 0000 		sts uart_rx_write_ptr,r24
+  64:serial.c      ****         uart_rx_len++;
+ 267               		.loc 1 64 0
+ 268 00ec 8091 0000 		lds r24,uart_rx_len
+ 269 00f0 8F5F      		subi r24,lo8(-(1))
+ 270 00f2 8093 0000 		sts uart_rx_len,r24
+ 271 00f6 00C0      		rjmp .L17
+ 272               	.L18:
+ 273               	.LBB2:
+  65:serial.c      ****     }else{
+  66:serial.c      ****         // Buffer overun. Nothing we do is good. Just drop the bytes
+  67:serial.c      ****         uint8_t tmp = UDR0;
+ 274               		.loc 1 67 0
+ 275 00f8 8091 C600 		lds r24,198
+ 276               	.L17:
+ 277               	/* epilogue start */
+ 278               	.LBE2:
+  68:serial.c      ****     }
+  69:serial.c      **** }
+ 279               		.loc 1 69 0
+ 280 00fc FF91      		pop r31
+ 281 00fe EF91      		pop r30
+ 282 0100 9F91      		pop r25
+ 283 0102 8F91      		pop r24
+ 284 0104 0F90      		pop r0
+ 285 0106 0FBE      		out __SREG__,r0
+ 286 0108 0F90      		pop r0
+ 287 010a 1F90      		pop r1
+ 288 010c 1895      		reti
+ 289               		.cfi_endproc
+ 290               	.LFE8:
+ 292               	.global	__vector_19
+ 294               	__vector_19:
+ 295               	.LFB9:
+  70:serial.c      **** 
+  71:serial.c      **** ISR(USART_UDRE_vect) {
+ 296               		.loc 1 71 0
+ 297               		.cfi_startproc
+ 298 010e 1F92      		push r1
+ 299               	.LCFI8:
+ 300               		.cfi_def_cfa_offset 3
+ 301               		.cfi_offset 1, -2
+ 302 0110 0F92      		push r0
+ 303               	.LCFI9:
+ 304               		.cfi_def_cfa_offset 4
+ 305               		.cfi_offset 0, -3
+ 306 0112 0FB6      		in r0,__SREG__
+ 307 0114 0F92      		push r0
+ 308 0116 1124      		clr __zero_reg__
+ 309 0118 8F93      		push r24
+ 310               	.LCFI10:
+ 311               		.cfi_def_cfa_offset 5
+ 312               		.cfi_offset 24, -4
+ 313 011a EF93      		push r30
+ 314               	.LCFI11:
+ 315               		.cfi_def_cfa_offset 6
+ 316               		.cfi_offset 30, -5
+ 317 011c FF93      		push r31
+ 318               	.LCFI12:
+ 319               		.cfi_def_cfa_offset 7
+ 320               		.cfi_offset 31, -6
+ 321               	/* prologue: Signal */
+ 322               	/* frame size = 0 */
+ 323               	/* stack size = 6 */
+ 324               	.L__stack_usage = 6
+  72:serial.c      ****     if(uart_tx_len>0) {
+ 325               		.loc 1 72 0
+ 326 011e 8091 0000 		lds r24,uart_tx_len
+ 327 0122 8823      		tst r24
+ 328 0124 01F0      		breq .L21
+  73:serial.c      ****         UDR0 = uart_tx_buf[uart_tx_read_ptr++];
+ 329               		.loc 1 73 0
+ 330 0126 E091 0000 		lds r30,uart_tx_read_ptr
+ 331 012a 81E0      		ldi r24,lo8(1)
+ 332 012c 8E0F      		add r24,r30
+ 333 012e 8093 0000 		sts uart_tx_read_ptr,r24
+ 334 0132 F0E0      		ldi r31,0
+ 335 0134 E050      		subi r30,lo8(-(uart_tx_buf))
+ 336 0136 F040      		sbci r31,hi8(-(uart_tx_buf))
+ 337 0138 8081      		ld r24,Z
+ 338 013a 8093 C600 		sts 198,r24
+  74:serial.c      ****         uart_tx_read_ptr &= UART_BUF_MASK;
+ 339               		.loc 1 74 0
+ 340 013e 8091 0000 		lds r24,uart_tx_read_ptr
+ 341 0142 8F71      		andi r24,lo8(31)
+ 342 0144 8093 0000 		sts uart_tx_read_ptr,r24
+  75:serial.c      ****         uart_tx_len--;
+ 343               		.loc 1 75 0
+ 344 0148 8091 0000 		lds r24,uart_tx_len
+ 345 014c 8150      		subi r24,lo8(-(-1))
+ 346 014e 8093 0000 		sts uart_tx_len,r24
+ 347 0152 00C0      		rjmp .L20
+ 348               	.L21:
+  76:serial.c      ****     }else{
+  77:serial.c      ****         UCSR0B &= ~(1<<UDRIE0); // No more data to send. Disable empty interrupt
+ 349               		.loc 1 77 0
+ 350 0154 8091 C100 		lds r24,193
+ 351 0158 8F7D      		andi r24,lo8(-33)
+ 352 015a 8093 C100 		sts 193,r24
+ 353               	.L20:
+ 354               	/* epilogue start */
+  78:serial.c      ****     }
+  79:serial.c      **** }
+ 355               		.loc 1 79 0
+ 356 015e FF91      		pop r31
+ 357 0160 EF91      		pop r30
+ 358 0162 8F91      		pop r24
+ 359 0164 0F90      		pop r0
+ 360 0166 0FBE      		out __SREG__,r0
+ 361 0168 0F90      		pop r0
+ 362 016a 1F90      		pop r1
+ 363 016c 1895      		reti
+ 364               		.cfi_endproc
+ 365               	.LFE9:
+ 367               	.global	uart_rx_len
+ 368               		.section .bss
+ 371               	uart_rx_len:
+ 372 0000 00        		.zero	1
+ 373               	.global	uart_rx_read_ptr
+ 376               	uart_rx_read_ptr:
+ 377 0001 00        		.zero	1
+ 378               	.global	uart_rx_write_ptr
+ 381               	uart_rx_write_ptr:
+ 382 0002 00        		.zero	1
+ 383               	.global	uart_tx_len
+ 386               	uart_tx_len:
+ 387 0003 00        		.zero	1
+ 388               	.global	uart_tx_read_ptr
+ 391               	uart_tx_read_ptr:
+ 392 0004 00        		.zero	1
+ 393               	.global	uart_tx_write_ptr
+ 396               	uart_tx_write_ptr:
+ 397 0005 00        		.zero	1
+ 398               		.comm	uart_rx_buf,32,1
+ 399               		.comm	uart_tx_buf,32,1
+ 400               	.global	uartfile
+ 401               		.data
+ 404               	uartfile:
+ 405 0000 0000 00   		.zero	3
+ 406 0003 03        		.byte	3
+ 407 0004 0000 0000 		.zero	4
+ 408 0008 0000      		.word	gs(uart_putchar)
+ 409 000a 0000      		.word	gs(uart_getchar)
+ 410 000c 0000      		.word	0
+ 411               		.text
+ 412               	.Letext0:
+ 413               		.file 2 "/usr/lib/avr/include/stdio.h"
+ 414               		.file 3 "/usr/lib/avr/include/stdint.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 serial.c
+     /tmp/ccNJH2tX.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccNJH2tX.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccNJH2tX.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccNJH2tX.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccNJH2tX.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccNJH2tX.s:12     .text:0000000000000000 uart_putchar
+     /tmp/ccNJH2tX.s:386    .bss:0000000000000003 uart_tx_len
+     /tmp/ccNJH2tX.s:396    .bss:0000000000000005 uart_tx_write_ptr
+                            *COM*:0000000000000020 uart_tx_buf
+     /tmp/ccNJH2tX.s:58     .text:000000000000003a uart_getchar
+     /tmp/ccNJH2tX.s:371    .bss:0000000000000000 uart_rx_len
+     /tmp/ccNJH2tX.s:376    .bss:0000000000000001 uart_rx_read_ptr
+                            *COM*:0000000000000020 uart_rx_buf
+     /tmp/ccNJH2tX.s:96     .text:0000000000000066 uart_init
+     /tmp/ccNJH2tX.s:123    .text:000000000000007e uart_write
+     /tmp/ccNJH2tX.s:145    .text:000000000000008c uart_available
+     /tmp/ccNJH2tX.s:162    .text:0000000000000092 uart_read
+     /tmp/ccNJH2tX.s:184    .text:00000000000000a0 __vector_20
+     /tmp/ccNJH2tX.s:215    .text:00000000000000b4 __vector_18
+     /tmp/ccNJH2tX.s:381    .bss:0000000000000002 uart_rx_write_ptr
+     /tmp/ccNJH2tX.s:294    .text:000000000000010e __vector_19
+     /tmp/ccNJH2tX.s:391    .bss:0000000000000004 uart_tx_read_ptr
+     /tmp/ccNJH2tX.s:404    .data:0000000000000000 uartfile
+
+UNDEFINED SYMBOLS
+__do_copy_data
+__do_clear_bss

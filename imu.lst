@@ -1,0 +1,389 @@
+   1               		.file	"imu.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	imu_write_reg
+  12               	imu_write_reg:
+  13               	.LFB1:
+  14               		.file 1 "imu.c"
+   1:imu.c         **** #include "imu.h"
+   2:imu.c         **** 
+   3:imu.c         **** #include "i2c_master.h"
+   4:imu.c         **** 
+   5:imu.c         **** void imu_init(void) {
+   6:imu.c         ****     // FS = 0x00 (250dps)
+   7:imu.c         ****     imu_write_reg(GYRO_ADDR, GYRO_CTRL4, 0x00);
+   8:imu.c         ****     imu_write_reg(GYRO_ADDR, GYRO_LOW_ODR, 0x00);
+   9:imu.c         ****     imu_write_reg(GYRO_ADDR, GYRO_CTRL1, 0x6F);
+  10:imu.c         **** 
+  11:imu.c         ****     // AFS = 0 (+/- 2 g full scale)
+  12:imu.c         ****     imu_write_reg(ACCEL_ADDR, ACCEL_CTRL2, 0x00);
+  13:imu.c         ****     // AODR = 0110 (100 Hz ODR); AZEN = AYEN = AXEN = 1 (all axes enabled)
+  14:imu.c         ****     imu_write_reg(ACCEL_ADDR, ACCEL_CTRL1, 0x67);
+  15:imu.c         **** }
+  16:imu.c         **** 
+  17:imu.c         **** void imu_write_reg(uint8_t addr, uint8_t reg, uint8_t value) {
+  15               		.loc 1 17 0
+  16               		.cfi_startproc
+  17               	.LVL0:
+  18 0000 CF93      		push r28
+  19               	.LCFI0:
+  20               		.cfi_def_cfa_offset 3
+  21               		.cfi_offset 28, -2
+  22 0002 DF93      		push r29
+  23               	.LCFI1:
+  24               		.cfi_def_cfa_offset 4
+  25               		.cfi_offset 29, -3
+  26 0004 00D0      		rcall .
+  27               	.LCFI2:
+  28               		.cfi_def_cfa_offset 6
+  29 0006 CDB7      		in r28,__SP_L__
+  30 0008 DEB7      		in r29,__SP_H__
+  31               	.LCFI3:
+  32               		.cfi_def_cfa_register 28
+  33               	/* prologue: function */
+  34               	/* frame size = 2 */
+  35               	/* stack size = 4 */
+  36               	.L__stack_usage = 4
+  18:imu.c         ****     uint8_t data[] = {reg, value};
+  37               		.loc 1 18 0
+  38 000a 6983      		std Y+1,r22
+  39 000c 4A83      		std Y+2,r20
+  19:imu.c         ****     i2c_transmit(addr, data, 2);
+  40               		.loc 1 19 0
+  41 000e 42E0      		ldi r20,lo8(2)
+  42 0010 50E0      		ldi r21,0
+  43               	.LVL1:
+  44 0012 BE01      		movw r22,r28
+  45               	.LVL2:
+  46 0014 6F5F      		subi r22,-1
+  47 0016 7F4F      		sbci r23,-1
+  48 0018 0E94 0000 		call i2c_transmit
+  49               	.LVL3:
+  50               	/* epilogue start */
+  20:imu.c         **** }
+  51               		.loc 1 20 0
+  52 001c 0F90      		pop __tmp_reg__
+  53 001e 0F90      		pop __tmp_reg__
+  54 0020 DF91      		pop r29
+  55 0022 CF91      		pop r28
+  56 0024 0895      		ret
+  57               		.cfi_endproc
+  58               	.LFE1:
+  60               	.global	imu_init
+  62               	imu_init:
+  63               	.LFB0:
+   5:imu.c         **** void imu_init(void) {
+  64               		.loc 1 5 0
+  65               		.cfi_startproc
+  66               	/* prologue: function */
+  67               	/* frame size = 0 */
+  68               	/* stack size = 0 */
+  69               	.L__stack_usage = 0
+   7:imu.c         ****     imu_write_reg(GYRO_ADDR, GYRO_CTRL4, 0x00);
+  70               		.loc 1 7 0
+  71 0026 40E0      		ldi r20,0
+  72 0028 63E2      		ldi r22,lo8(35)
+  73 002a 8BE6      		ldi r24,lo8(107)
+  74 002c 0E94 0000 		call imu_write_reg
+  75               	.LVL4:
+   8:imu.c         ****     imu_write_reg(GYRO_ADDR, GYRO_LOW_ODR, 0x00);
+  76               		.loc 1 8 0
+  77 0030 40E0      		ldi r20,0
+  78 0032 69E3      		ldi r22,lo8(57)
+  79 0034 8BE6      		ldi r24,lo8(107)
+  80 0036 0E94 0000 		call imu_write_reg
+  81               	.LVL5:
+   9:imu.c         ****     imu_write_reg(GYRO_ADDR, GYRO_CTRL1, 0x6F);
+  82               		.loc 1 9 0
+  83 003a 4FE6      		ldi r20,lo8(111)
+  84 003c 60E2      		ldi r22,lo8(32)
+  85 003e 8BE6      		ldi r24,lo8(107)
+  86 0040 0E94 0000 		call imu_write_reg
+  87               	.LVL6:
+  12:imu.c         ****     imu_write_reg(ACCEL_ADDR, ACCEL_CTRL2, 0x00);
+  88               		.loc 1 12 0
+  89 0044 40E0      		ldi r20,0
+  90 0046 61E2      		ldi r22,lo8(33)
+  91 0048 8DE1      		ldi r24,lo8(29)
+  92 004a 0E94 0000 		call imu_write_reg
+  93               	.LVL7:
+  14:imu.c         ****     imu_write_reg(ACCEL_ADDR, ACCEL_CTRL1, 0x67);
+  94               		.loc 1 14 0
+  95 004e 47E6      		ldi r20,lo8(103)
+  96 0050 60E2      		ldi r22,lo8(32)
+  97 0052 8DE1      		ldi r24,lo8(29)
+  98 0054 0C94 0000 		jmp imu_write_reg
+  99               	.LVL8:
+ 100               		.cfi_endproc
+ 101               	.LFE0:
+ 103               	.global	imu_read_reg
+ 105               	imu_read_reg:
+ 106               	.LFB2:
+  21:imu.c         **** 
+  22:imu.c         **** uint8_t imu_read_reg(uint8_t addr, uint8_t reg) {
+ 107               		.loc 1 22 0
+ 108               		.cfi_startproc
+ 109               	.LVL9:
+ 110 0058 1F93      		push r17
+ 111               	.LCFI4:
+ 112               		.cfi_def_cfa_offset 3
+ 113               		.cfi_offset 17, -2
+ 114 005a CF93      		push r28
+ 115               	.LCFI5:
+ 116               		.cfi_def_cfa_offset 4
+ 117               		.cfi_offset 28, -3
+ 118 005c DF93      		push r29
+ 119               	.LCFI6:
+ 120               		.cfi_def_cfa_offset 5
+ 121               		.cfi_offset 29, -4
+ 122 005e 00D0      		rcall .
+ 123               	.LCFI7:
+ 124               		.cfi_def_cfa_offset 7
+ 125 0060 CDB7      		in r28,__SP_L__
+ 126 0062 DEB7      		in r29,__SP_H__
+ 127               	.LCFI8:
+ 128               		.cfi_def_cfa_register 28
+ 129               	/* prologue: function */
+ 130               	/* frame size = 2 */
+ 131               	/* stack size = 5 */
+ 132               	.L__stack_usage = 5
+ 133 0064 182F      		mov r17,r24
+ 134 0066 6A83      		std Y+2,r22
+  23:imu.c         ****     i2c_transmit(addr, &reg, 1);
+ 135               		.loc 1 23 0
+ 136 0068 41E0      		ldi r20,lo8(1)
+ 137 006a 50E0      		ldi r21,0
+ 138 006c BE01      		movw r22,r28
+ 139               	.LVL10:
+ 140 006e 6E5F      		subi r22,-2
+ 141 0070 7F4F      		sbci r23,-1
+ 142 0072 0E94 0000 		call i2c_transmit
+ 143               	.LVL11:
+  24:imu.c         ****     uint8_t value;
+  25:imu.c         ****     i2c_receive(addr, &value, 1);
+ 144               		.loc 1 25 0
+ 145 0076 41E0      		ldi r20,lo8(1)
+ 146 0078 50E0      		ldi r21,0
+ 147 007a BE01      		movw r22,r28
+ 148 007c 6F5F      		subi r22,-1
+ 149 007e 7F4F      		sbci r23,-1
+ 150 0080 812F      		mov r24,r17
+ 151 0082 0E94 0000 		call i2c_receive
+ 152               	.LVL12:
+  26:imu.c         ****     return value;
+  27:imu.c         **** }
+ 153               		.loc 1 27 0
+ 154 0086 8981      		ldd r24,Y+1
+ 155               	/* epilogue start */
+ 156 0088 0F90      		pop __tmp_reg__
+ 157 008a 0F90      		pop __tmp_reg__
+ 158 008c DF91      		pop r29
+ 159 008e CF91      		pop r28
+ 160               	.LVL13:
+ 161 0090 1F91      		pop r17
+ 162               	.LVL14:
+ 163 0092 0895      		ret
+ 164               		.cfi_endproc
+ 165               	.LFE2:
+ 167               	.global	imu_read_data
+ 169               	imu_read_data:
+ 170               	.LFB3:
+  28:imu.c         **** 
+  29:imu.c         **** void imu_read_data(struct IMU* data) {
+ 171               		.loc 1 29 0
+ 172               		.cfi_startproc
+ 173               	.LVL15:
+ 174 0094 FF92      		push r15
+ 175               	.LCFI9:
+ 176               		.cfi_def_cfa_offset 3
+ 177               		.cfi_offset 15, -2
+ 178 0096 0F93      		push r16
+ 179               	.LCFI10:
+ 180               		.cfi_def_cfa_offset 4
+ 181               		.cfi_offset 16, -3
+ 182 0098 1F93      		push r17
+ 183               	.LCFI11:
+ 184               		.cfi_def_cfa_offset 5
+ 185               		.cfi_offset 17, -4
+ 186 009a CF93      		push r28
+ 187               	.LCFI12:
+ 188               		.cfi_def_cfa_offset 6
+ 189               		.cfi_offset 28, -5
+ 190 009c DF93      		push r29
+ 191               	.LCFI13:
+ 192               		.cfi_def_cfa_offset 7
+ 193               		.cfi_offset 29, -6
+ 194 009e CDB7      		in r28,__SP_L__
+ 195 00a0 DEB7      		in r29,__SP_H__
+ 196               	.LCFI14:
+ 197               		.cfi_def_cfa_register 28
+ 198 00a2 2797      		sbiw r28,7
+ 199               	.LCFI15:
+ 200               		.cfi_def_cfa_offset 14
+ 201 00a4 0FB6      		in __tmp_reg__,__SREG__
+ 202 00a6 F894      		cli
+ 203 00a8 DEBF      		out __SP_H__,r29
+ 204 00aa 0FBE      		out __SREG__,__tmp_reg__
+ 205 00ac CDBF      		out __SP_L__,r28
+ 206               	/* prologue: function */
+ 207               	/* frame size = 7 */
+ 208               	/* stack size = 12 */
+ 209               	.L__stack_usage = 12
+ 210 00ae 8C01      		movw r16,r24
+  30:imu.c         ****     uint8_t values[6];
+  31:imu.c         **** 
+  32:imu.c         ****     uint8_t reg = GYRO_OUT_X_L | 0x80; //Set high bit for auto address increment
+ 211               		.loc 1 32 0
+ 212 00b0 88EA      		ldi r24,lo8(-88)
+ 213 00b2 F82E      		mov r15,r24
+ 214               	.LVL16:
+ 215 00b4 FF82      		std Y+7,r15
+  33:imu.c         ****     i2c_transmit(GYRO_ADDR, &reg, 1);
+ 216               		.loc 1 33 0
+ 217 00b6 41E0      		ldi r20,lo8(1)
+ 218 00b8 50E0      		ldi r21,0
+ 219 00ba BE01      		movw r22,r28
+ 220 00bc 695F      		subi r22,-7
+ 221 00be 7F4F      		sbci r23,-1
+ 222 00c0 8BE6      		ldi r24,lo8(107)
+ 223 00c2 0E94 0000 		call i2c_transmit
+ 224               	.LVL17:
+  34:imu.c         ****     i2c_receive(GYRO_ADDR, &values, 6);
+ 225               		.loc 1 34 0
+ 226 00c6 46E0      		ldi r20,lo8(6)
+ 227 00c8 50E0      		ldi r21,0
+ 228 00ca BE01      		movw r22,r28
+ 229 00cc 6F5F      		subi r22,-1
+ 230 00ce 7F4F      		sbci r23,-1
+ 231 00d0 8BE6      		ldi r24,lo8(107)
+ 232 00d2 0E94 0000 		call i2c_receive
+ 233               	.LVL18:
+  35:imu.c         ****     data->gyro.x = (int16_t)(values[0] | (values[1]<<8));
+ 234               		.loc 1 35 0
+ 235 00d6 8A81      		ldd r24,Y+2
+ 236 00d8 90E0      		ldi r25,0
+ 237 00da 982F      		mov r25,r24
+ 238 00dc 8827      		clr r24
+ 239 00de 2981      		ldd r18,Y+1
+ 240 00e0 822B      		or r24,r18
+ 241 00e2 F801      		movw r30,r16
+ 242 00e4 9183      		std Z+1,r25
+ 243 00e6 8083      		st Z,r24
+  36:imu.c         ****     data->gyro.y = (int16_t)(values[2] | (values[3]<<8));
+ 244               		.loc 1 36 0
+ 245 00e8 8C81      		ldd r24,Y+4
+ 246 00ea 90E0      		ldi r25,0
+ 247 00ec 982F      		mov r25,r24
+ 248 00ee 8827      		clr r24
+ 249 00f0 2B81      		ldd r18,Y+3
+ 250 00f2 822B      		or r24,r18
+ 251 00f4 9383      		std Z+3,r25
+ 252 00f6 8283      		std Z+2,r24
+  37:imu.c         ****     data->gyro.z = (int16_t)(values[4] | (values[5]<<8));
+ 253               		.loc 1 37 0
+ 254 00f8 8E81      		ldd r24,Y+6
+ 255 00fa 90E0      		ldi r25,0
+ 256 00fc 982F      		mov r25,r24
+ 257 00fe 8827      		clr r24
+ 258 0100 2D81      		ldd r18,Y+5
+ 259 0102 822B      		or r24,r18
+ 260 0104 9583      		std Z+5,r25
+ 261 0106 8483      		std Z+4,r24
+  38:imu.c         **** 
+  39:imu.c         ****     reg = ACCEL_OUT_X_L_A | 0x80; //Set high bit for auto address increment
+ 262               		.loc 1 39 0
+ 263 0108 FF82      		std Y+7,r15
+  40:imu.c         ****     i2c_transmit(ACCEL_ADDR, &reg, 1);
+ 264               		.loc 1 40 0
+ 265 010a 41E0      		ldi r20,lo8(1)
+ 266 010c 50E0      		ldi r21,0
+ 267 010e BE01      		movw r22,r28
+ 268 0110 695F      		subi r22,-7
+ 269 0112 7F4F      		sbci r23,-1
+ 270 0114 8DE1      		ldi r24,lo8(29)
+ 271 0116 0E94 0000 		call i2c_transmit
+ 272               	.LVL19:
+  41:imu.c         ****     i2c_receive(ACCEL_ADDR, &values, 6);
+ 273               		.loc 1 41 0
+ 274 011a 46E0      		ldi r20,lo8(6)
+ 275 011c 50E0      		ldi r21,0
+ 276 011e BE01      		movw r22,r28
+ 277 0120 6F5F      		subi r22,-1
+ 278 0122 7F4F      		sbci r23,-1
+ 279 0124 8DE1      		ldi r24,lo8(29)
+ 280 0126 0E94 0000 		call i2c_receive
+ 281               	.LVL20:
+  42:imu.c         ****     data->accel.x = (int16_t)(values[0] | (values[1]<<8));
+ 282               		.loc 1 42 0
+ 283 012a 8A81      		ldd r24,Y+2
+ 284 012c 90E0      		ldi r25,0
+ 285 012e 982F      		mov r25,r24
+ 286 0130 8827      		clr r24
+ 287 0132 2981      		ldd r18,Y+1
+ 288 0134 822B      		or r24,r18
+ 289 0136 F801      		movw r30,r16
+ 290 0138 9783      		std Z+7,r25
+ 291 013a 8683      		std Z+6,r24
+  43:imu.c         ****     data->accel.y = (int16_t)(values[2] | (values[3]<<8));
+ 292               		.loc 1 43 0
+ 293 013c 8C81      		ldd r24,Y+4
+ 294 013e 90E0      		ldi r25,0
+ 295 0140 982F      		mov r25,r24
+ 296 0142 8827      		clr r24
+ 297 0144 2B81      		ldd r18,Y+3
+ 298 0146 822B      		or r24,r18
+ 299 0148 9187      		std Z+9,r25
+ 300 014a 8087      		std Z+8,r24
+  44:imu.c         ****     data->accel.z = (int16_t)(values[4] | (values[5]<<8));
+ 301               		.loc 1 44 0
+ 302 014c 8E81      		ldd r24,Y+6
+ 303 014e 90E0      		ldi r25,0
+ 304 0150 982F      		mov r25,r24
+ 305 0152 8827      		clr r24
+ 306 0154 2D81      		ldd r18,Y+5
+ 307 0156 822B      		or r24,r18
+ 308 0158 9387      		std Z+11,r25
+ 309 015a 8287      		std Z+10,r24
+ 310               	/* epilogue start */
+  45:imu.c         **** }
+ 311               		.loc 1 45 0
+ 312 015c 2796      		adiw r28,7
+ 313 015e 0FB6      		in __tmp_reg__,__SREG__
+ 314 0160 F894      		cli
+ 315 0162 DEBF      		out __SP_H__,r29
+ 316 0164 0FBE      		out __SREG__,__tmp_reg__
+ 317 0166 CDBF      		out __SP_L__,r28
+ 318 0168 DF91      		pop r29
+ 319 016a CF91      		pop r28
+ 320 016c 1F91      		pop r17
+ 321 016e 0F91      		pop r16
+ 322               	.LVL21:
+ 323 0170 FF90      		pop r15
+ 324 0172 0895      		ret
+ 325               		.cfi_endproc
+ 326               	.LFE3:
+ 328               	.Letext0:
+ 329               		.file 2 "/usr/lib/avr/include/stdint.h"
+ 330               		.file 3 "imu.h"
+ 331               		.file 4 "i2c_master.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 imu.c
+     /tmp/ccwJiHFP.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccwJiHFP.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccwJiHFP.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccwJiHFP.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccwJiHFP.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccwJiHFP.s:12     .text:0000000000000000 imu_write_reg
+     /tmp/ccwJiHFP.s:62     .text:0000000000000026 imu_init
+     /tmp/ccwJiHFP.s:105    .text:0000000000000058 imu_read_reg
+     /tmp/ccwJiHFP.s:169    .text:0000000000000094 imu_read_data
+
+UNDEFINED SYMBOLS
+i2c_transmit
+i2c_receive
