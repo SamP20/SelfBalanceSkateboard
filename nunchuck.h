@@ -4,6 +4,8 @@
 #include <stdint.h>
 
 #define NCK_ADDR 0x52
+#define NCK_BTN_C 0x01
+#define NCK_BTN_Z 0x02
 
 struct NCK {
     uint8_t buttons;
