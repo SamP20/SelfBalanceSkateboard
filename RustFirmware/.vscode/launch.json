@@ -1,0 +1,45 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "cwd": "${workspaceRoot}",
+            "executable": "${workspaceRoot}/target/thumbv7em-none-eabihf/debug/stm32",
+            "name": "Debug Microcontroller",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            "configFiles": [
+                "interface/stlink-v2-1.cfg",
+                "target/stm32l4x.cfg"
+            ],
+            "swoConfig": {
+                "enabled": true,
+                "cpuFrequency": 32000000,
+                "swoFrequency": 200000,
+                "decoders": [
+                    {
+                        "type": "console",
+                        "port": 0,
+                        "encoding": "ascii",
+                        "label": "test"
+                    }
+                ],
+                "source": "COM12"
+            }
+        },
+        {
+            "name": "Remote debug",
+            "type": "gdb",
+            "request": "launch",
+            "cwd": "${workspaceRoot}",
+            "target": "${workspaceRoot}/target/thumbv7em-none-eabihf/debug/stm32", 
+            "gdbpath" : "arm-none-eabi-gdb",
+            "autorun": [
+                "source -v openocd.gdb",
+            ]
+        }
+    ]
+}
